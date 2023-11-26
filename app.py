@@ -1,8 +1,6 @@
-from flask import Flask,render_template,redirect,request,flash
+from flask import Flask,render_template,redirect,request,flash,session
 from flask_debugtoolbar import DebugToolbarExtension
 from surveys import satisfaction_survey as survey
-
-responses = []
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "super-secret"
@@ -13,18 +11,22 @@ debug = DebugToolbarExtension(app)
 @app.route("/")
 def survey_start():
     """Display Survey title and instructions"""
+
     return render_template("satisfaction-survey.html",survey=survey)
 
 @app.route("/begin-survey", methods=["POST"])
 def begin_survey():
     """Reset data stored and begin the survey"""
-    responses.clear()
+    
+    session['responses'] = []
 
     return redirect("questions/0")
 
 @app.route("/questions/<int:qid>")
 def questions(qid):
     """Display question in survey and handle URL issues"""
+
+    responses = session['responses']
     if (responses is None):
         # attempt to access questions before starting survey
         redirect("/")
@@ -44,7 +46,9 @@ def answer():
     """Handler questions answered and store results"""
     choice = request.form["answer"]
 
+    responses = session['responses']
     responses.append(choice)
+    session['responses'] = responses
 
     if (len(responses) == len(survey.questions)):
         # All questions answered
@@ -55,4 +59,5 @@ def answer():
 
 @app.route("/complete")
 def complete():
-    return render_template("complete.html",answers=responses)
+    responses = session['responses']
+    return render_template("complete.html", answers = responses)
